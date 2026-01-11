@@ -1,4 +1,4 @@
-# NAT-8C1: 8bit computer
+# NAT-8C1: CISC CPU
 
 > ⚠️ **Warning**: This project is currently under development. It has not yet been fully verified and may be incomplete or unstable.
 > Stay tuned for updates.
