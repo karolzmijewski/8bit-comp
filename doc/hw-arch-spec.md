@@ -1,30 +1,38 @@
 # Hardware Architecture Spec
 ## 1. Overview
-The main purpose of this document is to describe hardware architecture of presented solution.
-This 8bit computer was created based on high level architecture of 16bit MARIE (Machine
-Architecture that is Really Intuitive and Easy) described in book "The Essentials of Computer
-Organization and Architecture" written by L.M. Null & J.M. Lobur with some architectural changes applied.
-It was created for educational purposes.
+The purpose of this document is to describe the hardware architecture of the presented solution.
+This 8-bit CPU was designed based on the high-level architecture of the 16-bit MARIE (Machine
+Architecture that is Really Intuitive and Easy) computer, as described in “The Essentials of Computer
+Organization and Architecture” by L. M. Null and J. M. Lobur, with several architectural modifications applied.
+The project was created for educational purposes.
 
 ## 2. Clock
-Main clock was done based on popular timer 555 designed by Hans Camenzind in 1971.
-For this project we used the most popular NE555 IC (Integrated Circuit) provided by Signetics.
-However it can be easily replaced by for instance LM555 introduced by Texas Instruments.
-Reference to the documentation may be found here:
+The main clock is implemented using the popular 555 timer, originally designed by Hans Camenzind in 1971.
+For this project, the widely used NE555 integrated circuit, originally manufactured by Signetics, was selected.
+However, it can be easily replaced by compatible alternatives, such as the LM555 introduced by Texas Instruments.
+Relevant documentation:
 - NE555: https://www.ti.com/lit/ds/symlink/ne555.pdf
 - LM555: https://www.ti.com/lit/ds/symlink/lm555.pdf
 
-It's also well described at [wiki page](https://en.wikipedia.org/wiki/555_timer_IC)
+Additional background information can be found on the [wiki page](https://en.wikipedia.org/wiki/555_timer_IC)
 
 ### 2.1 Continous mode
-For our application NE555 runs in **astable mode**. The mode is used to continously stream of digital pulses
-in configured period. This configuration is done by adding connection between `THR` (threshold) and `TRIG`
-(trigger) pins connected with supply voltage through the potentiometer (R2), resistor (R3), resistor (R1)
-and capacitor (C2). Resistor R3 was added only to determine value of minimal resistance - to limit voltage
-when potentiometr R2 is set to 0 ohms, it's important for bipolar timers to keep output saturated near the zero
-volts during discharge. Due to this connection we can keep same voltage on both pins (see `Note` below
-for more details). Duty cycle depends on resistence of potentiometer, two resistors (R2 + R3, and R1) and value
-of capacitor (C2). The idea is simple, capacitor voltage triggers internal latch to change the state. From "1"
+In this design, the NE555 operates in **astable mode**, which generates a continuous stream of digital pulses
+with a configurable period. This configuration is achieved by connecting the `THR` (threshold) and `TRIG` (trigger)
+pins and supplying them through a network consisting of a potentiometer (R2), resistors (R1 and R3), and a capacitor
+(C2). Resistor **R3** is included to define the minimum resistance value, preventing excessive current when the
+potentiometer R2 is set to 0 Ω. This is particularly important for bipolar timers to ensure proper output saturation
+near 0 V during capacitor discharge. Due to this configuration, the voltage on the `TRIG` and `THR` pins remains identical
+(see the `note` below). The duty cycle depends on:
+- the resistance of the potentiometer (R2),
+- resistors R1 and R3,
+- the capacitance of C2.
+
+The operating principle is straightforward: the capacitor voltage controls the internal SR latch of the timer.
+- When the capacitor discharges below **1/3 Vcc**, the output (`Q`) switches to logic high.
+- When the capacitor charges above **2/3 Vcc**, the output switches to logic low.
+
+The idea is simple, capacitor voltage triggers internal latch to change the state. From "1"
 to "0" during the time of capacitor discharge (C2) and from "0" to "1" during capacitor charge. Time of
 charging/discharging of capacitor depends on its capacity (expressed in farads), resistance of potentiometr (R2)
 and resistors (R3 and R1 - expressed in ohms). The higher resistence the slower charging/discharging process because
@@ -44,17 +52,14 @@ The exact schema of described connections was added below:
 
 > __Note__:
 >
-> If the voltage lower below 1/3 Vcc on TR (trigger) pin it causes internal latch to change state of "Q" pin
-> to "1" and capacitor starts charging through potentiometr (R2) and resistors (R3 + R1).
-> Once capacitor reaches 2/3 Vcc on THR (treshold) pin it causes internal latch to change state of "Q" pin
-> to "0" and capacitor starts discharging throught potentiometr (R2) and resistor (R3).
-> That is why it's important to keep same voltage on both pins TR and THR
-> Internal transistor inside the timer are resposnsible for charge/discharge switching.
-> Signal transformation observed on osciloscope was added below. The reference power supply (Vcc) is equal to 5V,
-> the potentiometer was turned into 0 ohms.
-> - channel 1 (yellow) shows the output from capacitor C2, as you can see voltage oscillate between
-> 1/3 Vcc and 2/3 Vcc.
-> - channel 2 (pink) shows the output on pin "Q" (clock)
+> When the voltage on the `TRIG` pin drops below **1/3 Vcc**, the internal latch sets the output `Q` to logic high,
+> and capacitor `C2` begins charging through `R1`, `R2`, and `R3`.
+> Once the voltage on the THR pin reaches **2/3 Vcc**, the latch resets the output `Q` to logic low, and the capacitor
+> discharges through `R2` and `R3`.
+> Therefore, maintaining the same voltage on both `TRIG` and `THR` pins is essential.
+> Oscilloscope measurements were taken with Vcc = 5 V and R2 set to 0 Ω:
+> - channel 1 (yellow) capacitor (C2) voltage oscillating between 1/3 Vcc and 2/3 Vcc
+> - channel 2 (pink) clock output (Q)
 >
 > <p align="center" width="100%">
 >     <img src="../design/clock/imgs/hw-main-clock-signal.png"/>
@@ -64,36 +69,32 @@ The exact schema of described connections was added below:
 > </p>
 
 
-The time of signal "1" (high) of each pulse can be count as follow:
+The pulse durations are defined as:
 
 ```math
 t_h =  ln(2) * (R1 + R2 + R3) * C2
 ```
-
-The time of signal "0" (low) of each pulse can be count as follow:
-
 ```math
 t_l =  ln(2) * (R2 + R3) * C2
 ```
 
-In that terms frequency is:
+The resulting frequency is:
 
 ```math
 f = \frac{1}{t_h +t_l} = \frac{1}{ln(2) * (R1 + 2(R2 + R3)) * C2}
 ```
 
-and duty cycle is equal to:
+The duty cycle is:
 
 ```math
 D = \frac{t_h}{t_h +t_l} * 100 = \frac{R1 + R2 + R3}{R1 + 2(R2 + R3)} * 100
 ```
 
 ### 2.2 Stepping mode
-Stepping mode is usefull for debugging purposes. It's necessary to be able to trigger a single clock signal
-to debug code execution of single instruction processed by ALU (Arthmeric and Logical Unit) of CPU (Central
-Processing Unit). Single pulse can be easily triggered by switch button added between Vcc and GND however it
-may lead to multiple pulses triggered by bouncing connectors of the switch during the button push. It was
-shown on figure below, where single button push has tiggered two pulses:
+The stepping mode is intended for debugging purposes. It enables the generation of a single clock pulse,
+allowing step-by-step execution of CPU instructions. A simple push-button connected between Vcc and GND
+can generate a pulse; however, mechanical switch bouncing may cause multiple unintended pulses, as shown
+in Figure 2.2.1.
 
 <div>
     <p align="center" width="100%">
@@ -105,12 +106,9 @@ shown on figure below, where single button push has tiggered two pulses:
 </div>
 
 
-This issue is well known and there are many possible solutions used to reduce noise caused by bounced connectors of
-the switch like additional schmitt trigger added to circuit, digital flip-flop, properly configured counters and
-so on. In our case we will use the same component as before (used for general clock) NE555 running this
-time in **monostable mode**. Reduction of connectors bounce is possible due to internal construction of the chip.
-NE555 has SR latch inside (Set-Reset flip-flop), which can be used to reduce the noise. To demonstrate this
-issue model of NE555 timer in monostable mode was prepared in ltspice simulator
+Switch bouncing is a well-known issue and can be mitigated using Schmitt triggers, flip-flops, counters, or debouncing circuits.
+In this design, the NE555 timer in monostable mode is used for debouncing. The NE555 contains an internal SR latch, which
+effectively suppresses bounce-induced noise. An LTspice simulation model was created to demonstrate this behavior.
 (clock/ltspice/ne555n-monostable-debouncing):
 
 <div>
@@ -122,15 +120,15 @@ issue model of NE555 timer in monostable mode was prepared in ltspice simulator
     </p>
 </div>
 
-NE555 produce single pulse when the `THR` signal drops below 1/3 Vcc. Duration of the pulse depends on time needed
-to charge capacitor C3 to 2/3 Vcc. It can be expressed by following equation:
+In monostable mode, the NE555 generates a single output pulse when the TRIG signal falls below 1/3 Vcc. The pulse duration depends
+on the charging time of capacitor C3:
 
 ```math
 t = ln(3) * R7 * C3
 ```
 
 Additional circuit with voltage controlled switch at the bottom left corrner was added to simulate switch bouncing
-issue. Simulation run shows following results:
+issue. Simulation results confirm that even with a bouncing trigger signal, only one clean output pulse is generated.
 
 <div>
     <p align="center" width="100%">
@@ -142,7 +140,7 @@ issue. Simulation run shows following results:
 </div>
 
 Where output pulse V(q) (marked green) was intentionally lowered to 4.9V to increase readability of the chart.
-V(thr) (marked red) shows us C3 charging process through the resistor R7, and then immediate drop after it
+V(thr) (marked red) shows C3 charging process through the resistor R7, and then immediate drop after it
 reach 2/3 Vcc limit. Drop goes immediate because there is no resistior plugged between discharging transistor (Q1)
 and GND. The last signal V(trg) (marked pink) shows trigger signal. The most important is the fact that even if
 situation showed at the beging of the section (Figure 2.2.1) happens the circuit still works and only single
@@ -159,7 +157,7 @@ pulse will be generated:
 </div>
 
 
-Full schema for debouncing circuit used for stepping mode (debug purposes) was added bellow:
+The complete debouncing circuit for stepping mode is shown in Figure 2.2.5.
 
 <div>
     <p align="center" width="100%">
@@ -170,34 +168,30 @@ Full schema for debouncing circuit used for stepping mode (debug purposes) was a
     </p>
 </div>
 
-Based on these configutations:
+### 2.3 Combined Clock Circuit
+Using:
+ - NE555 in **astable mode** for continuous operation (figure 2.1.1),
+ - NE555 in **monostable mode** for single-step debugging (figure 2.2.5),
 
- - NE555 in astable mode: main clock (figure 2.1.1)
- - NE555 in monostable mode: stepping clock (figure 2.2.5)
+a unified clock circuit was constructed.
 
-We can construct clock circuit. On the one hand **astable mode** will be used as an operational mode of the clock
+On the one hand **astable mode** will be used as an operational mode of the clock
 to continously generate digital clocking signal, on the other hand **astable mode** will be used as a debug mode
 of the clock to generate single clocking signal trigger by debounced pushed button (NE555 chip resposibility in this
 configuration is limited to debounce the signal produced by button push).
 
-Many different configurations can be introduced for such circuit. Some of them may use NE555 timer, other may use
-different circuites. For instance a bit different module based on the same chip NE555 was created by Ben Eater, proper
-schema is provided [here](https://eater.net/8bit/clock). The circuit uses three NE555 chips configured in
-three different modes: astable, monostable and bistable. Two of them were described in this document the third
-configuration (bistable) was used to debounce SPDT (Single Pole Double Throw) switch used to select betweem NE555
-in astable and monostable modes. It's a great example that can be used to learn all of the most common configurations
-of NE555 timer, and how to create and optimize basic logic-gate circuits using Karnaugh map and De Morgan's
-laws to unify all gates to the functional complete type of gates (NAND or NOR). However this circuit is using a lot
-of chips to perform one simple task. For this project we will use much simplier circuit which will use one NE555 timer
-that could be switched in one of two modes (astable and monostable) using SPDT switch and two transistors. We will
-use two different types of transistors one bipolar PNP transistor (controlled by current) and unipolar N-channel
-MOSFET (Metal Oxide Semiconductor Field Effect Transistor - controlled by voltage). Circuit can be done also using
-single type of transistors, however for this project we use two different types just for educational purposes - to
-present main differences between them. The whole circuit was presented below:
+Unlike more complex designs (e.g., [Ben Eater’s clock module]((https://eater.net/8bit/clock)) using three NE555 timers),
+this project employs a simpler approach using:
+- one NE555 timer,
+- one SPDT switch,
+- a PNP bipolar transistor,
+- an N-channel MOSFET.
+This approach reduces component count while retaining full functionality and serves educational purposes by demonstrating
+differences between bipolar PNP and MOSFET transistors.
 
 <div>
     <p align="center" width="100%">
-        <img src="../design/clock/imgs/rel-clock-sch.png" width="60%" height="60%"/>
+        <img src="../design/clock/imgs/rel-clock.png" width="60%" height="60%"/>
     </p>
     <p align="center">
         <i>Figure 2.2.6: clock circuit</i>
@@ -211,7 +205,7 @@ by path on the right hand site. SPDT switch (S2) on the one hand is responsible 
 alternative path with regular circuit and on the other hand for bipolar PNP transistor BC556 (Q1) control. When:
 
 - switch S2 is opened (pin 2 and 3 of the switch are connected) **base** pin of the transistor is grounded. That means
-that there is no current between **base** and **emiter**, and as a result **collector**-**emiter** path is opened.
+there is no current between **base** and **emiter**, and as a result **collector**-**emiter** path is opened.
 It gives an oportunity to discharge the C2 capacitor over the `DIS` pin, which starts the oscillation described at the
 beginning of the section - astable mode of the NE555.
 - switch S2 is closed (pin 2 and 1 of the switch are connected) current flows over the **base** pin to the **emitter**
@@ -279,17 +273,22 @@ transistor (BS170) is controlled by voltage (instead of current - as it was done
 the HLT line is grounted connection between the **source** and **drain** is opened, and the digital signal that goes to
 the **gate** will be propageted the **drain** pin. However when the voltage on the **source** pin go high (around
 Vcc value) the connection between **gate** and **drain** will be closed, and digital signal won't be propageted to the
-**drain**. That saying by setting `HLT` line to the logical 0 clock signal will be propagated, and by setting it to the
-logical 1 clock signal will be halted.
+**drain**. That saying:
+- when `HLT = 0`, the clock signal propagates normally.
+- when `HLT = 1`, the clock output is suppressed, effectively halting the CPU.
 
 ## 3. ALU (Arthmetic Logic Unit)
 
-Arthmetic Logic Unit can be done based on TTL circuit 74181 described [here](https://en.wikipedia.org/wiki/74181). However
-this project tries to reflect architecture described by "The Essentials of Computer Organization and Architecture" book.
-A very simple ALU schema based on some logic gates was presented there in chapter 3.6. This unit can perform one basic
-arthmetic operation (addion) without carry and three logic operations (AND, OR, NOT). We will use this circuit with small
-change introduced to provide subtraction and carry possibilities to make the unit a bit more usefull. The original schema was
-presented below:
+The ALU could be implemented using the classic TTL **74\*181**, but this project follows the simplified ALU architecture
+presented in “The Essentials of Computer Organization and Architecture” (Section 3.6).
+
+The original design supports:
+- one arithmetic operation (addition without carry),
+- three logic operations (AND, OR, NOT).
+
+This design was extended to support:
+- subtraction,
+- carry handling.
 
 <div>
     <p align="center" width="100%">
@@ -329,25 +328,12 @@ To build the prototype of ALU circuit we can use following TTL chips:
 - 4-bit full adder circuit (74\*283),
 - logic gates: quad 2-input AND gate (74\*08), quad 2-input OR gate (74\*32), hex inverter (74\*04)
 
-These chips are common and easy to find. However to make the unit usefull we need to provide at least one additional basic
-arthmetic operation which is substraction. To understand how it was implemented some knowledge about basic represention of
-numbers in digital systems is needed. The most common representation of signed integers on micro-computer is
-[two's complement system](https://en.wikipedia.org/wiki/Two's_complement), where a positive number is represented as binary
-number and the most significant bit is treated as a sign bit, negative number is created by invertion of all bits
-and adding 1 to it. The operation overflow should be ignored. Such representation allows to avoid some basic issues like double
-representation of number "0", or additional circuit to establish the correct sign bit for calculated result.
+To support subtraction, [two's complement arithmetic](https://en.wikipedia.org/wiki/Two's_complement) is used:
+- bits are inverted using XOR (Exclusive OR) gates,
+- a carry-in of 1 is added via a full adder.
 
-That saying substraction can be done by adding negative number to the positive number. All what we need to do is to change one of
-the numbers to negative by:
-- inverting all bits,
-- adding "1" to it.
-
-To invert the number XOR (Exclusive OR) gate can be used. It will invert bit value provided on one of the gate's input if second input will
-be set to "1" (**control line**), otherwise it will propagate the original value of the bit. 
-To add one to the inverted number we can replace original half adder circuit by full adder and pass **control line** value to it as
-carry input signal.
-
-After taking these changes into account we can build the ALU IC using six TTL chips, the final result was presented below:
+Such representation allows to avoid some basic issues like double representation of number "0", or additional circuit to establish the correct
+sign bit for calculated result. The final 8-bit ALU implementation uses six TTL chips and is shown in Figure 3.3.
 
 <div>
     <p align="center" width="100%">
@@ -358,26 +344,24 @@ After taking these changes into account we can build the ALU IC using six TTL ch
     </p>
 </div>
 
-## 4. General Purpose Registers
+## 4. Registers
 
-General Purpose Registers are utilize by ALU unit for computations, to store temporary values and operation results. Each register
-is build based on D-type flip-flops connected in sequence. Single register is 8 bits width, and was implemented with two 74\*74 TTL
-chips connected together. NAT-1 has the same set of registers as original architecture of MARIE, however some of the internal
-connections were modified. Following registers are present:
-- **ACU** - Acumulator, general purpose registers to keep data to process by ALU. It holds also result of the performed operation.
-- **MAR** - Memory Address Register, contains lower part of the memory address (RAM). It's connected directly with PC for "memory jump"
-  operation. As far as PC register is responsible for address iteration, MAR register holds return address.
-- **MBR** - Memory Buffer Register, contains data read from memory, or data to be written into memory. It's connected to the ALU, and
+Registers are utilize by ALU unit for computations, to store temporary values and operation results. Each register is build based on D-type
+flip-flops connected in sequence. Single register is 8 bits width, and was implemented with two 74\*74 TTL chips connected together. NAT-8C1
+has the same set of registers as original architecture of MARIE, however some of the internal connections were modified. Following registers
+are present:
+- **ACU** - Acumulator, general purpose register, stores value to be processed by ALU, holds result of the performed operation.
+- **MAR** - Memory Address Register, stores lower part of the memory address (RAM).
+- **MBR** - Memory Buffer Register, stores value read from memory, or value to be written into memory. It's connected to the ALU, and
   together with **ACU** are used for computions.
 - **PC** - Program Counter, contains memory address of the next instruction to be processed by ALU. It can jump to the memory address
   pointed by **MAR** register, first bit of **IR** and special purpose register **PAR** (Page Address Register). Based on the content
-  of these registers poper value of the memory address used for this operation is calculated. This register is created based on JK
-  flip-flops (74\*76), contrary to the rest of the registers created based on D-type flip-flops. Due to different and more complex
-  internal design of the register it was described in details in separate section (see [Program Counter](5.-Program-Counter)).
-- **IR** - Instruction Register, It contains opcode (operational code) of the instruction to be processed by ALU. It's splitted into
-  lower part of 4 bits long, which contains optional data which may be needed by instruction, and higher part of 4 bits long which
-  contains instruction code. It gives us possibility to define 16 possible instructions described in a separate section
-  (see [ISA](10.-Instruction-Set-Architecture)).
+  of these registers poper value of the memory address is calculated. This register is created based on JK flip-flops (74\*76), contrary
+  to the rest of the registers created based on D-type flip-flops. Due to different and more complex internal design of the register it
+  was described in details in separate section (see [Program Counter](5.-Program-Counter)).
+- **IR** - Instruction Register, It stores opcode (operational code) of the instruction to be processed by ALU. It's splitted into
+  lower part of 4 bits, which contains optional instruction data, and higher part of 4 bits which contains instruction code. It gives
+  possibility to define 16 possible instructions described in a separate section (see [ISA](10.-Instruction-Set-Architecture)).
 - **IO[0-3]** - Input/Output Registers, four registers used to connect external devices/controlers to the CPU.
 
 <div>
@@ -385,32 +369,31 @@ connections were modified. Following registers are present:
         <img src="../design/regs/imgs/rel-regs-conn.png" width="60%" height="60%" />
     </p>
     <p align="center">
-        <i>Figure 4.1: General Purpose Registers - overview</i>
+        <i>Figure 4.1: Registers - overview</i>
     </p>
 </div>
 
-Following registers: MAR, MBR, PC, IR, are dedicated for specific operations. These has additional, direct connections to ALU, RAM
-and other registers. These can't be used for different operations. Current state of the CPU is kept by special purpose register FLAG.
-All registers are plugged into **data bus**, used for data exchange between them, as well as memory.
+Current state of the CPU is kept by special purpose register FLAG. All registers are plugged into **data bus**, used for data exchange
+between them and memory.
 
 <div>
     <p align="center" width="100%">
         <img src="../design/regs/imgs/rel-regs.png" width="60%" height="60%" />
     </p>
     <p align="center">
-        <i>Figure 4.2: General Purpose Registers - exact schema</i>
+        <i>Figure 4.2: Registers - exact schema</i>
     </p>
 </div>
 
 ## 5. Program Counter
 
 Program counter is reponsible for iterating through the addresses of RAM and make possible for the CPU to load consecutive instructions
-from there and execute them. It's one of the [General Purpose Registers](4.-General-Purpose-Registers), however it's created in a
-different, more complex way. It was built based on synchronous JK flip-flops binary counters connected in sequence. Single chip `74*161`
-has four JK flip-flops connected together. All JK flip-flopps are clocked simultaneously, to eliminated the output counting spikes, which
-are normally associated with asynchronous counters. Due to `RCO` (ripple carry output) it is possible to cascading several chips together.
-This application has four chips connected together to be able to address memory (13 address lines in total). It's also possible to load
-value of starting address via `A-D` pins and `LD` (load) signal, which is crucial for all jump instructions exposed as a part of CPU ISA.
+from there and execute them. It's implemented using different, more complex way based on synchronous JK flip-flops binary counters
+connected in sequence. Single chip `74*161` has four JK flip-flops connected together. All JK flip-flopps are clocked simultaneously,
+to eliminated the output counting spikes, which are normally associated with asynchronous counters. Due to `RCO` (ripple carry output)
+it is possible to cascading several chips together. This application has four chips connected together to be able to address memory (13
+address lines in total). It's also possible to load starting address via `A-D` pins and `LD` (load) signal, which is crucial for all
+branch instructions exposed as a part of CPU ISA.
 
 <div>
     <p align="center" width="100%">
@@ -427,18 +410,18 @@ As a result to load a new address for jump instruction we need to split the addr
 
 ## 6. Special Purpose Registers
 TBD
-- **PAR**
-- **FLAG**
+- **PAR** - Page Address Register
+- **FLAG** - CPU Status Register
 
 ## 7. RAM (Random Access Memory)
 
-NAT-1 has single memory chip. Both data to process and instructions to perform in form of program compiled to the machine code
+NAT-8C1 has single memory chip. Both data to process and instructions to perform in form of program compiled to the machine code
 are stored there. In general to build the main memory module one of the following type of chips can be used:
 - DRAM (Dynamic Random Access Memory) - due to internal desing, where each bit of information is represented by state of internal
   capacitor (charged state coresponds to high state of bit - "1", discharged state coresponds to low state of bit - "0")
-  and related charging/discharging transitor, these type of memory is usally cheaper than SRAM, and due to different approach of
+  and related charging/discharging transitor, these type of memory is usually cheaper than SRAM, and due to different approach of
   cells addressing it has reduced number of address pins (twice). However to keep the state of memory permanent over the time of
-  execution it requires a specialized circuit for cells state refresh, which makes the whole memory module more complex comparing
+  execution it requires a specialized circuit for cell states refresh, which makes the whole memory module more complex comparing
   with modules based on SRAM chips.
 - SRAM (Static Random Access Memory) - this type of chip is built based on D-type flip flops, same as shift registers. As a result
   the state of the bit is stored by inverting feedback on the circuit's gates. Memory itself is more complex then DRAM and as result
