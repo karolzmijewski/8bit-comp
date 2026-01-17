@@ -17,3 +17,4 @@ a book written by Linda Null and Julia Lobur. The project was developed for educ
 # Documentation
 List of available documents:
 - [Hardware Architecture Spec](doc/hw-arch-spec.md)
+- [Instruction Set Spec](doc/isa-spec.md)

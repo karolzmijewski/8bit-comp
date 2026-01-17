@@ -481,7 +481,12 @@ below:
 TBD
 
 ## 9. Control Unit
-TBD
 
-## 10. Instruction Set Architecture
-TBD
+<div>
+    <p align="center" width="100%">
+        <img src="../design/cu/imgs/rel-control-unit.png" width="60%" height="60%">
+    </p>
+    <p align="center">
+        <i>Figure 9.1: Control unit schema</i>
+    </p>
+</div>
