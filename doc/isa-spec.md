@@ -1,8 +1,11 @@
 # Instruction Set Architecture
 
-## Control unit signals:
-| Mnemonic | Full Name | Pin Number |
-|---------|-----------|------------|
+## CU signals
+
+Control Unit Signals
+
+| Signal | Full Name | Pin Number |
+|--------|-----------|------------|
 | PCL**O** | Program Counter Low Out | 1 |
 | PCH**O** | Program Counter High Out | 2 |
 | IR**I** | Instruction Register In | 3 |
@@ -12,9 +15,9 @@
 | PCE | Program Counter Enable | 7 |
 | PCH**I** | Program Counter High In | 8 |
 | ALU**O** | Arithmetic Logic Unit Out | 9 |
-| ALUA | Arithmetic Logic Unit Port A | 10 |
-| ALUB | Arithmetic Logic Unit Port B | 11 |
-| ALUC | Arithmetic Logic Unit Port C | 12 |
+| ALU**A** | Arithmetic Logic Unit Port A | 10 |
+| ALU**B** | Arithmetic Logic Unit Port B | 11 |
+| ALU**C** | Arithmetic Logic Unit Port C | 12 |
 | HLT | Halt | 13 |
 | ACU**I** | Accumulator In | 14 |
 | MAR**I** | Memory Address Register In | 15 |
@@ -32,3 +35,56 @@
 | IO2**O** | Input/Output Register 2 Out | 27 |
 | PCL**I** | Program Counter Low In | 28 |
 | CS**I** | Chip Select In | 29 |
+
+## ALU operational codes
+
+Arthmetic Logic Unit operational codes decoding based on Control Unit Signals.
+
+| OPCODE  | ALU**A** | ALU**B** | ALU**C** |
+|---------|----------|----------|----------|
+| ADD [ + ] | 0 | 0 | 0 |
+| SUB [ - ] | 0 | 0 | 1 |
+| NEG [ ~ ] | 0 | 1 | 0 |
+| RSVD0     | 0 | 1 | 1 |
+| OR [ \| ] | 1 | 0 | 0 |
+| RSVD1     | 1 | 0 | 1 |
+| AND [ & ] | 1 | 1 | 0 |
+| RSVD2     | 1 | 1 | 1 |
+
+
+## Instructions Set
+
+CPU instruction set mapping. Commands are set via the `IR` (Instruction Register).
+From there, the following codes are decoded by the `CU` (Control Unit) and
+translated into proper [CU signals](#cu-signals).
+
+| Mnemonic | Code    |
+|----------|---------|
+| LOAD     | 0 0 0 0 |
+| STORE    | 0 0 1 0 |
+| ADD      | 0 0 1 1 |
+| SUBT     | 0 1 0 0 |
+| INPUT    | 0 1 0 1 |
+| OUTPUT   | 0 1 1 0 |
+| HALT     | 0 1 1 1 |
+| SKIPCOND | 1 0 0 0 |
+| JUMP     | 1 0 0 1 |
+
+### STORE
+
+CU signals mapping for Store instruction.
+
+| No. | Notes |Instruction | CU step | CU signals up | | | |
+|----|---|-------------|---------|----------|----------|----------|----------|
+| 0  | F | 0 0 1 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1  | F | 0 0 1 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2  | F | 0 0 1 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3  | 0 | 0 0 1 0     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4  | 1 | 0 0 1 0     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5  | 2 | 0 0 1 0     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6  | 3 | 0 0 1 0     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
+| 7  | 4 | 0 0 1 0     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 8  | 5 | 0 0 1 0     | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
+| 9  | 6 | 0 0 1 0     | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
+| 10 | 7 | 0 0 1 0     | 1 0 1 0 | ACU**O** | MRQ      | MRW      | PCE      |
+
