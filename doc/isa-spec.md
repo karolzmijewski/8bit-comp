@@ -130,3 +130,17 @@ CU signals mapping for `Output` instruction.
 | 1  | F | 0 1 1 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
 | 2  | F | 0 1 1 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
 | 3  | 0 | 0 1 1 0     | 0 0 1 1 | ACU**O** | IO0**I** |          |          |
+
+### SUBST
+
+CU signals mapping for `Subst` instruction.
+
+| No. | Notes |Instruction | CU step | CU signals up | | | |
+|----|---|-------------|---------|----------|----------|----------|----------|
+| 0  | F | 0 1 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1  | F | 0 1 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2  | F | 0 1 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3  | 0 | 0 1 0 0     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4  | 1 | 0 1 0 0     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5  | 2 | 0 1 0 0     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6  | 3 | 0 1 0 0     | 0 1 1 0 | ALU**C** | ALU**O** | ACU**I** |          |
