@@ -72,7 +72,7 @@ translated into proper [CU signals](#cu-signals).
 
 ### STORE
 
-CU signals mapping for Store instruction.
+CU signals mapping for `Store` instruction.
 
 | No. | Notes |Instruction | CU step | CU signals up | | | |
 |----|---|-------------|---------|----------|----------|----------|----------|
@@ -87,4 +87,18 @@ CU signals mapping for Store instruction.
 | 8  | 5 | 0 0 1 0     | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
 | 9  | 6 | 0 0 1 0     | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
 | 10 | 7 | 0 0 1 0     | 1 0 1 0 | ACU**O** | MRQ      | MRW      | PCE      |
+
+### ADD
+
+CU signals mapping for `Add` instruction.
+
+| No. | Notes |Instruction | CU step | CU signals up | | | |
+|----|---|-------------|---------|----------|----------|----------|----------|
+| 0  | F | 0 0 1 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1  | F | 0 0 1 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2  | F | 0 0 1 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3  | 0 | 0 0 1 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4  | 1 | 0 0 1 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5  | 2 | 0 0 1 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6  | 3 | 0 0 1 1     | 0 1 1 0 | ALU**O** | ACU**I** |          |          |
 
