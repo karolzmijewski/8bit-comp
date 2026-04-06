@@ -119,3 +119,14 @@ CU signals mapping for `Load` instruction.
 | 8  | 5 | 0 0 0 1     | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
 | 9  | 6 | 0 0 0 1     | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
 | 10 | 7 | 0 0 0 1     | 1 0 1 0 | ACU**I** | MRQ      | MRD      | PCE      |
+
+### OUTPUT
+
+CU signals mapping for `Output` instruction.
+
+| No. | Notes |Instruction | CU step | CU signals up | | | |
+|----|---|-------------|---------|----------|----------|----------|----------|
+| 0  | F | 0 1 1 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1  | F | 0 1 1 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2  | F | 0 1 1 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3  | 0 | 0 1 1 0     | 0 0 1 1 | ACU**O** | IO0**I** |          |          |
