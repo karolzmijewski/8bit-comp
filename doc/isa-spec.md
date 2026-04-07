@@ -84,7 +84,7 @@ translated into proper [CU signals](#cu-signals).
 
 ### STORE
 
-CU signals mapping for `Store` instruction.
+CU signals decoding table for `Store` instruction.
 
 | No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
 |-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
@@ -102,7 +102,7 @@ CU signals mapping for `Store` instruction.
 
 ### ADD
 
-CU signals mapping for `Add` instruction.
+CU signals decoding table for `Add` instruction.
 
 | No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
 |-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
@@ -116,7 +116,7 @@ CU signals mapping for `Add` instruction.
 
 ### LOAD
 
-CU signals mapping for `Load` instruction.
+CU signals decoding table for `Load` instruction.
 
 | No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
 |-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
@@ -134,7 +134,7 @@ CU signals mapping for `Load` instruction.
 
 ### OUTPUT
 
-CU signals mapping for `Output` instruction.
+CU signals decoding table for `Output` instruction.
 
 | No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
 |-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
@@ -145,7 +145,7 @@ CU signals mapping for `Output` instruction.
 
 ### SUBST
 
-CU signals mapping for `Subst` instruction.
+CU signals decoding table for `Subst` instruction.
 
 | No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
 |-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
@@ -159,7 +159,7 @@ CU signals mapping for `Subst` instruction.
 
 ### JUMP
 
-CU signals mapping for `Jump` instruction.
+CU signals decoding table for `Jump` instruction.
 
 | No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
 |-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
@@ -174,3 +174,34 @@ CU signals mapping for `Jump` instruction.
 | 8   | 5     | X  | X  | X  | 1 0 0 1     | 1 0 0 0 | MRQ      | MRD      | MAR**I** |          |
 | 9   | 6     | X  | X  | X  | 1 0 0 1     | 1 0 0 1 | MAR**O** | PCH**I** | CS**I**  |          |
 | 10  | 7     | X  | X  | X  | 1 0 0 1     | 1 0 1 0 | MBR**O** | PCL**I** |          |          |
+
+### SKIPCOND
+
+CU signals decoding table for `Skipcond` instruction.
+
+| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
+| 0   | F     | 0  | 0  | 0  | 1 0 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | 0  | 0  | 0  | 1 0 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | 0  | 0  | 0  | 1 0 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 0   | F     | 0  | 0  | 1  | 1 0 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | 0  | 0  | 1  | 1 0 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | 0  | 0  | 1  | 1 0 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | 0  | 0  | 1  | 1 0 0 0     | 0 0 1 1 | PCE      |          |          |          |
+| 4   | 1     | 0  | 0  | 1  | 1 0 0 0     | 0 1 0 0 | PCE      |          |          |          |
+| 5   | 2     | 0  | 0  | 1  | 1 0 0 0     | 0 1 0 1 | PCE      |          |          |          |
+| 6   | 3     | 0  | 0  | 1  | 1 0 0 0     | 0 1 1 0 | PCE      |          |          |          |
+| 0   | F     | 0  | 1  | 0  | 1 0 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | 0  | 1  | 0  | 1 0 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | 0  | 1  | 0  | 1 0 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | 0  | 1  | 0  | 1 0 0 0     | 0 0 1 1 | PCE      |          |          |          |
+| 4   | 1     | 0  | 1  | 0  | 1 0 0 0     | 0 1 0 0 | PCE      |          |          |          |
+| 5   | 2     | 0  | 1  | 0  | 1 0 0 0     | 0 1 0 1 | PCE      |          |          |          |
+| 6   | 3     | 0  | 1  | 0  | 1 0 0 0     | 0 1 1 0 | PCE      |          |          |          |
+| 0   | F     | 1  | 0  | 0  | 1 0 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | 1  | 0  | 0  | 1 0 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | 1  | 0  | 0  | 1 0 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | 1  | 0  | 0  | 1 0 0 0     | 0 0 1 1 | PCE      |          |          |          |
+| 4   | 1     | 1  | 0  | 0  | 1 0 0 0     | 0 1 0 0 | PCE      |          |          |          |
+| 5   | 2     | 1  | 0  | 0  | 1 0 0 0     | 0 1 0 1 | PCE      |          |          |          |
+| 6   | 3     | 1  | 0  | 0  | 1 0 0 0     | 0 1 1 0 | PCE      |          |          |          |
