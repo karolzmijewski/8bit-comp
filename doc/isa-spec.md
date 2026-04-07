@@ -216,3 +216,14 @@ CU signals decoding table for `Halt` instruction.
 | 1   | F     | X  | X  | X  | 0 1 1 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
 | 2   | F     | X  | X  | X  | 0 1 1 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
 | 3   | 0     | X  | X  | X  | 0 1 1 1     | 0 0 1 1 | HLT      |          |          |          |
+
+### INPUT
+
+CU signals decoding table for `Input` instruction.
+
+| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 1 0 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 1 0 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 1 0 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 1 0 1     | 0 0 1 1 | ACU**I** | IO0**O** |          |          |
