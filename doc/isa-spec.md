@@ -86,91 +86,91 @@ translated into proper [CU signals](#cu-signals).
 
 CU signals mapping for `Store` instruction.
 
-| No. | Notes |Instruction | CU step | CU signals up | | | |
-|----|---|-------------|---------|----------|----------|----------|----------|
-| 0  | F | 0 0 1 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1  | F | 0 0 1 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2  | F | 0 0 1 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3  | 0 | 0 0 1 0     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4  | 1 | 0 0 1 0     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5  | 2 | 0 0 1 0     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6  | 3 | 0 0 1 0     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
-| 7  | 4 | 0 0 1 0     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 8  | 5 | 0 0 1 0     | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
-| 9  | 6 | 0 0 1 0     | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
-| 10 | 7 | 0 0 1 0     | 1 0 1 0 | ACU**O** | MRQ      | MRW      | PCE      |
+| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 0 1 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 0 1 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 0 1 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 0 1 0     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     | X  | X  | X  | 0 0 1 0     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     | X  | X  | X  | 0 0 1 0     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     | X  | X  | X  | 0 0 1 0     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
+| 7   | 4     | X  | X  | X  | 0 0 1 0     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 8   | 5     | X  | X  | X  | 0 0 1 0     | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
+| 9   | 6     | X  | X  | X  | 0 0 1 0     | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
+| 10  | 7     | X  | X  | X  | 0 0 1 0     | 1 0 1 0 | ACU**O** | MRQ      | MRW      | PCE      |
 
 ### ADD
 
 CU signals mapping for `Add` instruction.
 
-| No. | Notes |Instruction | CU step | CU signals up | | | |
-|----|---|-------------|---------|----------|----------|----------|----------|
-| 0  | F | 0 0 1 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1  | F | 0 0 1 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2  | F | 0 0 1 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3  | 0 | 0 0 1 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4  | 1 | 0 0 1 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5  | 2 | 0 0 1 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6  | 3 | 0 0 1 1     | 0 1 1 0 | ALU**O** | ACU**I** |          |          |
+| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 0 1 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 0 1 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 0 1 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 0 1 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     | X  | X  | X  | 0 0 1 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     | X  | X  | X  | 0 0 1 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     | X  | X  | X  | 0 0 1 1     | 0 1 1 0 | ALU**O** | ACU**I** |          |          |
 
 ### LOAD
 
 CU signals mapping for `Load` instruction.
 
-| No. | Notes |Instruction | CU step | CU signals up | | | |
-|----|---|-------------|---------|----------|----------|----------|----------|
-| 0  | F | 0 0 0 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1  | F | 0 0 0 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2  | F | 0 0 0 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3  | 0 | 0 0 0 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4  | 1 | 0 0 0 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5  | 2 | 0 0 0 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6  | 3 | 0 0 0 1     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
-| 7  | 4 | 0 0 0 1     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 8  | 5 | 0 0 0 1     | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
-| 9  | 6 | 0 0 0 1     | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
-| 10 | 7 | 0 0 0 1     | 1 0 1 0 | ACU**I** | MRQ      | MRD      | PCE      |
+| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
+| 0   | F     |  X |  X |  X | 0 0 0 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     |  X |  X |  X | 0 0 0 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     |  X |  X |  X | 0 0 0 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     |  X |  X |  X | 0 0 0 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     |  X |  X |  X | 0 0 0 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     |  X |  X |  X | 0 0 0 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     |  X |  X |  X | 0 0 0 1     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
+| 7   | 4     |  X |  X |  X | 0 0 0 1     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 8   | 5     |  X |  X |  X | 0 0 0 1     | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
+| 9   | 6     |  X |  X |  X | 0 0 0 1     | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
+| 10  | 7     |  X |  X |  X | 0 0 0 1     | 1 0 1 0 | ACU**I** | MRQ      | MRD      | PCE      |
 
 ### OUTPUT
 
 CU signals mapping for `Output` instruction.
 
-| No. | Notes |Instruction | CU step | CU signals up | | | |
-|----|---|-------------|---------|----------|----------|----------|----------|
-| 0  | F | 0 1 1 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1  | F | 0 1 1 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2  | F | 0 1 1 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3  | 0 | 0 1 1 0     | 0 0 1 1 | ACU**O** | IO0**I** |          |          |
+| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 1 1 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 1 1 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 1 1 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 1 1 0     | 0 0 1 1 | ACU**O** | IO0**I** |          |          |
 
 ### SUBST
 
 CU signals mapping for `Subst` instruction.
 
-| No. | Notes |Instruction | CU step | CU signals up | | | |
-|----|---|-------------|---------|----------|----------|----------|----------|
-| 0  | F | 0 1 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1  | F | 0 1 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2  | F | 0 1 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3  | 0 | 0 1 0 0     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4  | 1 | 0 1 0 0     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5  | 2 | 0 1 0 0     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6  | 3 | 0 1 0 0     | 0 1 1 0 | ALU**C** | ALU**O** | ACU**I** |          |
+| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 1 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 1 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 1 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 1 0 0     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     | X  | X  | X  | 0 1 0 0     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     | X  | X  | X  | 0 1 0 0     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     | X  | X  | X  | 0 1 0 0     | 0 1 1 0 | ALU**C** | ALU**O** | ACU**I** |          |
 
 ### JUMP
 
 CU signals mapping for `Jump` instruction.
 
-| No. | Notes |Instruction | CU step | CU signals up | | | |
-|----|---|-------------|---------|----------|----------|----------|----------|
-| 0  | F | 1 0 0 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1  | F | 1 0 0 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2  | F | 1 0 0 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3  | 0 | 1 0 0 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4  | 1 | 1 0 0 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5  | 2 | 1 0 0 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6  | 3 | 1 0 0 1     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
-| 7  | 4 | 1 0 0 1     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 8  | 5 | 1 0 0 1     | 1 0 0 0 | MRQ      | MRD      | MAR**I** |          |
-| 9  | 6 | 1 0 0 1     | 1 0 0 1 | MAR**O** | PCH**I** | CS**I**  |          |
-| 10 | 7 | 1 0 0 1     | 1 0 1 0 | MBR**O** | PCL**I** |          |          |
+| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 1 0 0 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 1 0 0 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 1 0 0 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 1 0 0 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     | X  | X  | X  | 1 0 0 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     | X  | X  | X  | 1 0 0 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     | X  | X  | X  | 1 0 0 1     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
+| 7   | 4     | X  | X  | X  | 1 0 0 1     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 8   | 5     | X  | X  | X  | 1 0 0 1     | 1 0 0 0 | MRQ      | MRD      | MAR**I** |          |
+| 9   | 6     | X  | X  | X  | 1 0 0 1     | 1 0 0 1 | MAR**O** | PCH**I** | CS**I**  |          |
+| 10  | 7     | X  | X  | X  | 1 0 0 1     | 1 0 1 0 | MBR**O** | PCL**I** |          |          |
