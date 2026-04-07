@@ -205,3 +205,14 @@ CU signals decoding table for `Skipcond` instruction.
 | 4   | 1     | 1  | 0  | 0  | 1 0 0 0     | 0 1 0 0 | PCE      |          |          |          |
 | 5   | 2     | 1  | 0  | 0  | 1 0 0 0     | 0 1 0 1 | PCE      |          |          |          |
 | 6   | 3     | 1  | 0  | 0  | 1 0 0 0     | 0 1 1 0 | PCE      |          |          |          |
+
+### HALT
+
+CU signals decoding table for `Halt` instruction.
+
+| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 1 1 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 1 1 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 1 1 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 1 1 1     | 0 0 1 1 | HLT      |          |          |          |
