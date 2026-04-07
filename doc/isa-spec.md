@@ -36,6 +36,18 @@ Control Unit Signals
 | PCL**I** | Program Counter Low In | 28 |
 | CS**I** | Chip Select In | 29 |
 
+
+## CPU flags
+
+Central Processing Unit flags:
+
+| Flag | Name       | Description                                                                |
+|------|------------|----------------------------------------------------------------------------|
+| ZF   | Zero Flag  | Set to 1 if the result of an operation is zero, otherwise set to 0.        |
+| SF   | Sign Flag  | Reflects the sign of the result, set to 1 if the result is negative.       |
+| CF   | Carry Flag | Set to 1 if an operation produces a carry (overflow from MSB in unsigned). |
+
+
 ## ALU operational codes
 
 Arthmetic Logic Unit operational codes decoding based on Control Unit Signals.
