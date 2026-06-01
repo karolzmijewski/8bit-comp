@@ -30,7 +30,7 @@ Control Unit Signals
 | MAR**O** | Memory Address Register Out | 22 | 2-15 |
 | IR**O** | Instruction Register Out | 23 | 2-16 |
 | MBR**O** | Memory Buffer Register Out | 24 | 2-17 |
-| IO0**O** | Input/Output Register 0 Out | 25 | 3-9
+| IO0**O** | Input/Output Register 0 Out | 25 | 3-9 |
 | IO1**O** | Input/Output Register 1 Out | 26 | 3-10 |
 | IO2**O** | Input/Output Register 2 Out | 27 | 3-11 |
 | PCL**I** | Program Counter Low In | 28 | 3-13 |
@@ -73,6 +73,7 @@ translated into proper [CU signals](#cu-signals).
 
 | Mnemonic | Code    |
 |----------|---------|
+| NOP      | 0 0 0 0 |
 | LOAD     | 0 0 0 1 |
 | STORE    | 0 0 1 0 |
 | ADD      | 0 0 1 1 |
@@ -82,6 +83,27 @@ translated into proper [CU signals](#cu-signals).
 | HALT     | 0 1 1 1 |
 | SKIPCOND | 1 0 0 0 |
 | JUMP     | 1 0 0 1 |
+
+### Instruction encoding and alignment
+
+- The instruction word size is 32 bits (4 bytes).
+- The program counter (PC) is byte-addressed. Each assertion of `PCE` advances the PC by 1 byte.
+- Instructions are aligned to 4-byte boundaries. If an instruction uses fewer than 4 bytes, the remaining bytes MUST be filled with `NOP` so that the next real instruction starts at the next 4-byte boundary.
+
+In other words: instruction start addresses satisfy $PC \bmod 4 = 0$.
+
+#### NOP
+
+`NOP` performs no operation (no register/memory side effects; flags unchanged). It exists to pad instruction words to 4 bytes.
+
+#### SKIPCOND
+
+`SKIPCOND` conditionally skips the next 32-bit instruction word.
+
+- If the condition is met, the control unit asserts `PCE` 4 times to advance the PC by 4 bytes.
+- If the condition is not met, execution continues with the next byte.
+
+Note: programs must be padded/aligned as described above for “skip 4 bytes” to reliably land at the next instruction.
 
 ### STORE
 
