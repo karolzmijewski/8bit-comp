@@ -4,37 +4,38 @@
 
 Control Unit Signals
 
-| Signal | Full Name | Pin Number |
-|--------|-----------|------------|
-| PCL**O** | Program Counter Low Out | 1 |
-| PCH**O** | Program Counter High Out | 2 |
-| IR**I** | Instruction Register In | 3 |
-| MRQ | Memory Request | 4 |
-| MRW | Memory Write | 5 |
-| MRD | Memory Read | 6 |
-| PCE | Program Counter Enable | 7 |
-| PCH**I** | Program Counter High In | 8 |
-| ALU**O** | Arithmetic Logic Unit Out | 9 |
-| ALU**A** | Arithmetic Logic Unit Port A | 10 |
-| ALU**B** | Arithmetic Logic Unit Port B | 11 |
-| ALU**C** | Arithmetic Logic Unit Port C | 12 |
-| HLT | Halt | 13 |
-| ACU**I** | Accumulator In | 14 |
-| MAR**I** | Memory Address Register In | 15 |
-| IR**I** | Instruction Register In | 16 |
-| MBR**I** | Memory Buffer Register In | 17 |
-| IO0**I** | Input/Output Register 0 In | 18 |
-| IO1**I** | Input/Output Register 1 In | 19 |
-| IO2**I** | Input/Output Register 2 In | 20 |
-| ACU**O** | Accumulator Register Out | 21 |
-| MAR**O** | Memory Address Register Out | 22 |
-| IR**O** | Instruction Register Out | 23 |
-| MBR**O** | Memory Buffer Register Out | 24 |
-| IO0**O** | Input/Output Register 0 Out | 25 |
-| IO1**O** | Input/Output Register 1 Out | 26 |
-| IO2**O** | Input/Output Register 2 Out | 27 |
-| PCL**I** | Program Counter Low In | 28 |
-| CS**I** | Chip Select In | 29 |
+| Signal | Full Name | Pin Number | Pin Per Chip |
+|--------|-----------|------------|--------------|
+| PCL**O** | Program Counter Low Out | 1 | 0-9 |
+| PCH**O** | Program Counter High Out | 2 | 0-10 |
+| PR**I** | Page Register In | 3 | 0-11 |
+| MRQ | Memory Request | 4 | 0-13 |
+| MRW | Memory Write | 5 | 0-14 |
+| MRD | Memory Read | 6 | 0-15 |
+| PCE | Program Counter Enable | 7 | 0-16 |
+| PCH**I** | Program Counter High In | 8 | 0-17 |
+| ALU**O** | Arithmetic Logic Unit Out | 9 | 1-9 |
+| ALU**A** | Arithmetic Logic Unit Port A | 10 | 1-10 |
+| ALU**B** | Arithmetic Logic Unit Port B | 11 | 1-11 |
+| ALU**C** | Arithmetic Logic Unit Port C | 12 | 1-13 |
+| HLT | Halt | 13 | 1-14 |
+| ACU**I** | Accumulator In | 14 | 1-15 |
+| MAR**I** | Memory Address Register In | 15 | 1-16 |
+| IR**I** | Instruction Register In | 16 | 1-17 |
+| MBR**I** | Memory Buffer Register In | 17 | 2-9 |
+| IO0**I** | Input/Output Register 0 In | 18 | 2-10 |
+| IO1**I** | Input/Output Register 1 In | 19 | 2-11 |
+| IO2**I** | Input/Output Register 2 In | 20 | 2-13 |
+| ACU**O** | Accumulator Register Out | 21 | 2-14 |
+| MAR**O** | Memory Address Register Out | 22 | 2-15 |
+| IR**O** | Instruction Register Out | 23 | 2-16 |
+| MBR**O** | Memory Buffer Register Out | 24 | 2-17 |
+| IO0**O** | Input/Output Register 0 Out | 25 | 3-9
+| IO1**O** | Input/Output Register 1 Out | 26 | 3-10 |
+| IO2**O** | Input/Output Register 2 Out | 27 | 3-11 |
+| PCL**I** | Program Counter Low In | 28 | 3-13 |
+| CS**I** | Chip Select In | 29 | 3-14 |
+| FLAG | Flag Register In | 30 | 3-15 |
 
 
 ## CPU flags
@@ -72,7 +73,7 @@ translated into proper [CU signals](#cu-signals).
 
 | Mnemonic | Code    |
 |----------|---------|
-| LOAD     | 0 0 0 0 |
+| LOAD     | 0 0 0 1 |
 | STORE    | 0 0 1 0 |
 | ADD      | 0 0 1 1 |
 | SUBT     | 0 1 0 0 |
