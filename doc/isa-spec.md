@@ -90,6 +90,11 @@ translated into proper [CU signals](#cu-signals).
 - The program counter (PC) is byte-addressed. Each assertion of `PCE` advances the PC by 1 byte.
 - Instructions are aligned to 4-byte boundaries. If an instruction uses fewer than 4 bytes, the remaining bytes MUST be filled with `NOP` so that the next real instruction starts at the next 4-byte boundary.
 
+The first byte of every instruction word is loaded into the `IR` (Instruction Register):
+
+- `IR[7:4]` (high nibble) is the pcode - primary opcode (as listed in the table above).
+- `IR[3:0]` (low nibble) is a subcode. For most instructions it is reserved and should be `0`. For `SKIPCOND` it selects the condition.
+
 In other words: instruction start addresses satisfy $PC \bmod 4 = 0$.
 
 #### NOP
@@ -98,155 +103,260 @@ In other words: instruction start addresses satisfy $PC \bmod 4 = 0$.
 
 #### SKIPCOND
 
-`SKIPCOND` conditionally skips the next 32-bit instruction word.
+`SKIPCOND` conditionally skips the next 32-bit (4-byte) instruction word.
 
-- If the condition is met, the control unit asserts `PCE` 4 times to advance the PC by 4 bytes.
-- If the condition is not met, execution continues with the next byte.
+- If the selected condition is met, the control unit asserts `PCE` 4 times to advance the PC by 4 bytes.
+- If the selected condition is not met, execution continues normally.
 
-Note: programs must be padded/aligned as described above for “skip 4 bytes” to reliably land at the next instruction.
+The condition is selected via `IR[3:0]` and is evaluated using CPU flags (`CF`, `ZF`) produced by the previous ALU operation (typically a compare implemented as subtraction).
+
+##### Condition subcodes (unsigned comparisons)
+
+Assuming you implement `var1 <op> var2` by computing `var1 - var2` (e.g., load `var1` into `ACU`, load `var2` into `MBR`, then execute `SUBT`), the flags are interpreted as:
+
+- `ZF = 1` iff `var1 == var2`
+- `CF = 1` iff the subtraction required a borrow (i.e. `var1 < var2` in unsigned arithmetic)
+
+| `IR[3:0]` (instr. subcode) | Meaning | Condition (using flags)   |
+|----------------------------|---------|---------------------------|
+| `0x0`                      | `==`    | `ZF == 1`                 |
+| `0x1`                      | `!=`    | `ZF == 0`                 |
+| `0x2`                      | `<`     | `CF == 1`                 |
+| `0x3`                      | `<=`    | `(CF == 1) OR (ZF == 1)`  |
+| `0x4`                      | `>`     | `(CF == 0) AND (ZF == 0)` |
+| `0x5`                      | `>=`    | `CF == 0`                 |
+| `0x6..0xF`                 | RSVD    | -                         |
+
+> ⚠️ **Warning**: Signed comparisons (`SF`-based) are not directly supported with only `SF`/`ZF`/`CF` because correct signed `<`/`>` also requires an overflow indicator. TODO: To support true signed comparisons in hardware, add an overflow flag (OF) and use standard formulas like `(SF XOR OF)`, or handle it by more advanced branch in software (compiler). Note: check if all CMD signals propagated to CU are needed, right now it seems like only 3 bits are in use so we can free one line for OF.
+
+
+> **Note**: programs must be padded/aligned as described above for “skip 4 bytes” to reliably land at the next instruction.
+
+##### Code generation pattern
+
+To implement `if (var1 < var2) { ... }`:
+
+1. Compute flags for `var1 - var2` (e.g., via `SUBT`).
+2. Use `SKIPCOND` with the appropriate subcode to skip over a following `JUMP`.
+3. Place a `JUMP end_if` as the next instruction word.
+
+This yields the classic sequence:
+
+- `SUBT var2` (after loading `var1` into `ACU`)
+- `SKIPCOND <` (subcode `0x2`)
+- `JUMP end_if`
+- `...body...`
+- `end_if:`
 
 ### STORE
 
 CU signals decoding table for `Store` instruction.
 
-| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
-|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
-| 0   | F     | X  | X  | X  | 0 0 1 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | X  | X  | X  | 0 0 1 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | X  | X  | X  | 0 0 1 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | X  | X  | X  | 0 0 1 0     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4   | 1     | X  | X  | X  | 0 0 1 0     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5   | 2     | X  | X  | X  | 0 0 1 0     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6   | 3     | X  | X  | X  | 0 0 1 0     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
-| 7   | 4     | X  | X  | X  | 0 0 1 0     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 8   | 5     | X  | X  | X  | 0 0 1 0     | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
-| 9   | 6     | X  | X  | X  | 0 0 1 0     | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
-| 10  | 7     | X  | X  | X  | 0 0 1 0     | 1 0 1 0 | ACU**O** | MRQ      | MRW      | PCE      |
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 0 1 0     | X X X X       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 0 1 0     | X X X X       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 0 1 0     | X X X X       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 0 1 0     | X X X X       | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     | X  | X  | X  | 0 0 1 0     | X X X X       | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     | X  | X  | X  | 0 0 1 0     | X X X X       | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     | X  | X  | X  | 0 0 1 0     | X X X X       | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
+| 7   | 4     | X  | X  | X  | 0 0 1 0     | X X X X       | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 8   | 5     | X  | X  | X  | 0 0 1 0     | X X X X       | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
+| 9   | 6     | X  | X  | X  | 0 0 1 0     | X X X X       | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
+| 10  | 7     | X  | X  | X  | 0 0 1 0     | X X X X       | 1 0 1 0 | ACU**O** | MRQ      | MRW      | PCE      |
 
 ### ADD
 
 CU signals decoding table for `Add` instruction.
 
-| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
-|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
-| 0   | F     | X  | X  | X  | 0 0 1 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | X  | X  | X  | 0 0 1 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | X  | X  | X  | 0 0 1 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | X  | X  | X  | 0 0 1 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4   | 1     | X  | X  | X  | 0 0 1 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5   | 2     | X  | X  | X  | 0 0 1 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6   | 3     | X  | X  | X  | 0 0 1 1     | 0 1 1 0 | ALU**O** | ACU**I** |          |          |
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 0 1 1     | X X X X       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 0 1 1     | X X X X       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 0 1 1     | X X X X       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 0 1 1     | X X X X       | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     | X  | X  | X  | 0 0 1 1     | X X X X       | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     | X  | X  | X  | 0 0 1 1     | X X X X       | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     | X  | X  | X  | 0 0 1 1     | X X X X       | 0 1 1 0 | ALU**O** | ACU**I** |          |          |
 
 ### LOAD
 
 CU signals decoding table for `Load` instruction.
 
-| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
-|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
-| 0   | F     |  X |  X |  X | 0 0 0 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     |  X |  X |  X | 0 0 0 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     |  X |  X |  X | 0 0 0 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     |  X |  X |  X | 0 0 0 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4   | 1     |  X |  X |  X | 0 0 0 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5   | 2     |  X |  X |  X | 0 0 0 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6   | 3     |  X |  X |  X | 0 0 0 1     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
-| 7   | 4     |  X |  X |  X | 0 0 0 1     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 8   | 5     |  X |  X |  X | 0 0 0 1     | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
-| 9   | 6     |  X |  X |  X | 0 0 0 1     | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
-| 10  | 7     |  X |  X |  X | 0 0 0 1     | 1 0 1 0 | ACU**I** | MRQ      | MRD      | PCE      |
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     |  X |  X |  X | 0 0 0 1     | X X X X       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     |  X |  X |  X | 0 0 0 1     | X X X X       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     |  X |  X |  X | 0 0 0 1     | X X X X       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     |  X |  X |  X | 0 0 0 1     | X X X X       | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     |  X |  X |  X | 0 0 0 1     | X X X X       | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     |  X |  X |  X | 0 0 0 1     | X X X X       | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     |  X |  X |  X | 0 0 0 1     | X X X X       | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
+| 7   | 4     |  X |  X |  X | 0 0 0 1     | X X X X       | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 8   | 5     |  X |  X |  X | 0 0 0 1     | X X X X       | 1 0 0 0 | MRQ      | MRD      | PR**I**  | PCE      |
+| 9   | 6     |  X |  X |  X | 0 0 0 1     | X X X X       | 1 0 0 1 | MBR**O** | MAR**I** |          |          |
+| 10  | 7     |  X |  X |  X | 0 0 0 1     | X X X X       | 1 0 1 0 | ACU**I** | MRQ      | MRD      | PCE      |
 
 ### OUTPUT
 
 CU signals decoding table for `Output` instruction.
 
-| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
-|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
-| 0   | F     | X  | X  | X  | 0 1 1 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | X  | X  | X  | 0 1 1 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | X  | X  | X  | 0 1 1 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | X  | X  | X  | 0 1 1 0     | 0 0 1 1 | ACU**O** | IO0**I** |          |          |
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 1 1 0     | X X X X       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 1 1 0     | X X X X       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 1 1 0     | X X X X       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 1 1 0     | X X X X       | 0 0 1 1 | ACU**O** | IO0**I** |          |          |
 
 ### SUBST
 
 CU signals decoding table for `Subst` instruction.
 
-| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
-|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
-| 0   | F     | X  | X  | X  | 0 1 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | X  | X  | X  | 0 1 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | X  | X  | X  | 0 1 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | X  | X  | X  | 0 1 0 0     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4   | 1     | X  | X  | X  | 0 1 0 0     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5   | 2     | X  | X  | X  | 0 1 0 0     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6   | 3     | X  | X  | X  | 0 1 0 0     | 0 1 1 0 | ALU**C** | ALU**O** | ACU**I** |          |
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 1 0 0     | X X X X       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 1 0 0     | X X X X       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 1 0 0     | X X X X       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 1 0 0     | X X X X       | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     | X  | X  | X  | 0 1 0 0     | X X X X       | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     | X  | X  | X  | 0 1 0 0     | X X X X       | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     | X  | X  | X  | 0 1 0 0     | X X X X       | 0 1 1 0 | ALU**C** | ALU**O** | ACU**I** |          |
 
 ### JUMP
 
 CU signals decoding table for `Jump` instruction.
 
-| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
-|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
-| 0   | F     | X  | X  | X  | 1 0 0 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | X  | X  | X  | 1 0 0 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | X  | X  | X  | 1 0 0 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | X  | X  | X  | 1 0 0 1     | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
-| 4   | 1     | X  | X  | X  | 1 0 0 1     | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 5   | 2     | X  | X  | X  | 1 0 0 1     | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
-| 6   | 3     | X  | X  | X  | 1 0 0 1     | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
-| 7   | 4     | X  | X  | X  | 1 0 0 1     | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
-| 8   | 5     | X  | X  | X  | 1 0 0 1     | 1 0 0 0 | MRQ      | MRD      | MAR**I** |          |
-| 9   | 6     | X  | X  | X  | 1 0 0 1     | 1 0 0 1 | MAR**O** | PCH**I** | CS**I**  |          |
-| 10  | 7     | X  | X  | X  | 1 0 0 1     | 1 0 1 0 | MBR**O** | PCL**I** |          |          |
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 1 0 0 1     | X X X X       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 1 0 0 1     | X X X X       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 1 0 0 1     | X X X X       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 1 0 0 1     | X X X X       | 0 0 1 1 | PCL**O** | MAR**I** |          |          |
+| 4   | 1     | X  | X  | X  | 1 0 0 1     | X X X X       | 0 1 0 0 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 5   | 2     | X  | X  | X  | 1 0 0 1     | X X X X       | 0 1 0 1 | MRQ      | MRD      | MBR**I** | PCE      |
+| 6   | 3     | X  | X  | X  | 1 0 0 1     | X X X X       | 0 1 1 0 | PCL**O** | MAR**I** |          |          |
+| 7   | 4     | X  | X  | X  | 1 0 0 1     | X X X X       | 0 1 1 1 | PCH**O** | PR**I**  | IR**O**  | CS**I**  |
+| 8   | 5     | X  | X  | X  | 1 0 0 1     | X X X X       | 1 0 0 0 | MRQ      | MRD      | MAR**I** |          |
+| 9   | 6     | X  | X  | X  | 1 0 0 1     | X X X X       | 1 0 0 1 | MAR**O** | PCH**I** | CS**I**  |          |
+| 10  | 7     | X  | X  | X  | 1 0 0 1     | X X X X       | 1 0 1 0 | MBR**O** | PCL**I** |          |          |
 
 ### SKIPCOND
 
 CU signals decoding table for `Skipcond` instruction.
 
-| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
-|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
-| 0   | F     | 0  | 0  | 0  | 1 0 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | 0  | 0  | 0  | 1 0 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | 0  | 0  | 0  | 1 0 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 0   | F     | 0  | 0  | 1  | 1 0 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | 0  | 0  | 1  | 1 0 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | 0  | 0  | 1  | 1 0 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | 0  | 0  | 1  | 1 0 0 0     | 0 0 1 1 | PCE      |          |          |          |
-| 4   | 1     | 0  | 0  | 1  | 1 0 0 0     | 0 1 0 0 | PCE      |          |          |          |
-| 5   | 2     | 0  | 0  | 1  | 1 0 0 0     | 0 1 0 1 | PCE      |          |          |          |
-| 6   | 3     | 0  | 0  | 1  | 1 0 0 0     | 0 1 1 0 | PCE      |          |          |          |
-| 0   | F     | 0  | 1  | 0  | 1 0 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | 0  | 1  | 0  | 1 0 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | 0  | 1  | 0  | 1 0 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | 0  | 1  | 0  | 1 0 0 0     | 0 0 1 1 | PCE      |          |          |          |
-| 4   | 1     | 0  | 1  | 0  | 1 0 0 0     | 0 1 0 0 | PCE      |          |          |          |
-| 5   | 2     | 0  | 1  | 0  | 1 0 0 0     | 0 1 0 1 | PCE      |          |          |          |
-| 6   | 3     | 0  | 1  | 0  | 1 0 0 0     | 0 1 1 0 | PCE      |          |          |          |
-| 0   | F     | 1  | 0  | 0  | 1 0 0 0     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | 1  | 0  | 0  | 1 0 0 0     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | 1  | 0  | 0  | 1 0 0 0     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | 1  | 0  | 0  | 1 0 0 0     | 0 0 1 1 | PCE      |          |          |          |
-| 4   | 1     | 1  | 0  | 0  | 1 0 0 0     | 0 1 0 0 | PCE      |          |          |          |
-| 5   | 2     | 1  | 0  | 0  | 1 0 0 0     | 0 1 0 1 | PCE      |          |          |          |
-| 6   | 3     | 1  | 0  | 0  | 1 0 0 0     | 0 1 1 0 | PCE      |          |          |          |
+In the tables below, the `Notes` column uses: `F` = fetch step, then `0..3` are the four skip micro-steps (`PCE` pulses) executed only when the condition is true.
+
+Note: `SKIPCOND` uses `IR[3:0]` (instr. subcode) as a condition selector (see the `Instruction encoding and alignment` section). For relational operators, it is intended to be used after a subtraction-based compare where `CF` indicates borrow and `ZF` indicates equality. If the selected condition is true, it skips the next 4 bytes by asserting `PCE` four times.
+
+#### `==` (`Instr subcode = 0 0 0 0`)
+
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | 1  | 1 0 0 0     | 0 0 0 0       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | 1  | 1 0 0 0     | 0 0 0 0       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | 1  | 1 0 0 0     | 0 0 0 0       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | 1  | 1 0 0 0     | 0 0 0 0       | 0 0 1 1 | PCE      |          |          |          |
+| 4   | 1     | X  | X  | 1  | 1 0 0 0     | 0 0 0 0       | 0 1 0 0 | PCE      |          |          |          |
+| 5   | 2     | X  | X  | 1  | 1 0 0 0     | 0 0 0 0       | 0 1 0 1 | PCE      |          |          |          |
+| 6   | 3     | X  | X  | 1  | 1 0 0 0     | 0 0 0 0       | 0 1 1 0 | PCE      |          |          |          |
+| 7   | F     | X  | X  | 0  | 1 0 0 0     | 0 0 0 0       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 8   | F     | X  | X  | 0  | 1 0 0 0     | 0 0 0 0       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 9   | F     | X  | X  | 0  | 1 0 0 0     | 0 0 0 0       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+
+#### `!=` (`Instr subcode = 0 0 0 1`)
+
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | 0  | 1 0 0 0     | 0 0 0 1       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | 0  | 1 0 0 0     | 0 0 0 1       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | 0  | 1 0 0 0     | 0 0 0 1       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | 0  | 1 0 0 0     | 0 0 0 1       | 0 0 1 1 | PCE      |          |          |          |
+| 4   | 1     | X  | X  | 0  | 1 0 0 0     | 0 0 0 1       | 0 1 0 0 | PCE      |          |          |          |
+| 5   | 2     | X  | X  | 0  | 1 0 0 0     | 0 0 0 1       | 0 1 0 1 | PCE      |          |          |          |
+| 6   | 3     | X  | X  | 0  | 1 0 0 0     | 0 0 0 1       | 0 1 1 0 | PCE      |          |          |          |
+| 7   | F     | X  | X  | 1  | 1 0 0 0     | 0 0 0 1       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 8   | F     | X  | X  | 1  | 1 0 0 0     | 0 0 0 1       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 9   | F     | X  | X  | 1  | 1 0 0 0     | 0 0 0 1       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+
+#### `<` (`Instr subcode = 0 0 1 0`)
+
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | 1  | X  | 1 0 0 0     | 0 0 1 0       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | 1  | X  | 1 0 0 0     | 0 0 1 0       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | 1  | X  | 1 0 0 0     | 0 0 1 0       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | 1  | X  | 1 0 0 0     | 0 0 1 0       | 0 0 1 1 | PCE      |          |          |          |
+| 4   | 1     | X  | 1  | X  | 1 0 0 0     | 0 0 1 0       | 0 1 0 0 | PCE      |          |          |          |
+| 5   | 2     | X  | 1  | X  | 1 0 0 0     | 0 0 1 0       | 0 1 0 1 | PCE      |          |          |          |
+| 6   | 3     | X  | 1  | X  | 1 0 0 0     | 0 0 1 0       | 0 1 1 0 | PCE      |          |          |          |
+| 7   | F     | X  | 0  | X  | 1 0 0 0     | 0 0 1 0       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 8   | F     | X  | 0  | X  | 1 0 0 0     | 0 0 1 0       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 9   | F     | X  | 0  | X  | 1 0 0 0     | 0 0 1 0       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+
+#### `<=` (`Instr subcode = 0 0 1 1`)
+
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | 1  | X  | 1 0 0 0     | 0 0 1 1       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | 1  | X  | 1 0 0 0     | 0 0 1 1       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | 1  | X  | 1 0 0 0     | 0 0 1 1       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | 1  | X  | 1 0 0 0     | 0 0 1 1       | 0 0 1 1 | PCE      |          |          |          |
+| 4   | 1     | X  | 1  | X  | 1 0 0 0     | 0 0 1 1       | 0 1 0 0 | PCE      |          |          |          |
+| 5   | 2     | X  | 1  | X  | 1 0 0 0     | 0 0 1 1       | 0 1 0 1 | PCE      |          |          |          |
+| 6   | 3     | X  | 1  | X  | 1 0 0 0     | 0 0 1 1       | 0 1 1 0 | PCE      |          |          |          |
+| 7   | F     | X  | 0  | 0  | 1 0 0 0     | 0 0 1 1       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 8   | F     | X  | 0  | 0  | 1 0 0 0     | 0 0 1 1       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 9   | F     | X  | 0  | 0  | 1 0 0 0     | 0 0 1 1       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+
+#### `>` (`Instr subcode = 0 1 0 0`)
+
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | 0  | 0  | 1 0 0 0     | 0 1 0 0       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | 0  | 0  | 1 0 0 0     | 0 1 0 0       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | 0  | 0  | 1 0 0 0     | 0 1 0 0       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | 0  | 0  | 1 0 0 0     | 0 1 0 0       | 0 0 1 1 | PCE      |          |          |          |
+| 4   | 1     | X  | 0  | 0  | 1 0 0 0     | 0 1 0 0       | 0 1 0 0 | PCE      |          |          |          |
+| 5   | 2     | X  | 0  | 0  | 1 0 0 0     | 0 1 0 0       | 0 1 0 1 | PCE      |          |          |          |
+| 6   | 3     | X  | 0  | 0  | 1 0 0 0     | 0 1 0 0       | 0 1 1 0 | PCE      |          |          |          |
+| 7   | F     | X  | 1  | X  | 1 0 0 0     | 0 1 0 0       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 8   | F     | X  | 1  | X  | 1 0 0 0     | 0 1 0 0       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 9   | F     | X  | 1  | X  | 1 0 0 0     | 0 1 0 0       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+
+#### `>=` (`Instr subcode = 0 1 0 1`)
+
+| No. | Notes | SF | CF | ZF | Instr pcode | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | 0  | X  | 1 0 0 0     | 0 1 0 1       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | 0  | X  | 1 0 0 0     | 0 1 0 1       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | 0  | X  | 1 0 0 0     | 0 1 0 1       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | 0  | X  | 1 0 0 0     | 0 1 0 1       | 0 0 1 1 | PCE      |          |          |          |
+| 4   | 1     | X  | 0  | X  | 1 0 0 0     | 0 1 0 1       | 0 1 0 0 | PCE      |          |          |          |
+| 5   | 2     | X  | 0  | X  | 1 0 0 0     | 0 1 0 1       | 0 1 0 1 | PCE      |          |          |          |
+| 6   | 3     | X  | 0  | X  | 1 0 0 0     | 0 1 0 1       | 0 1 1 0 | PCE      |          |          |          |
+| 7   | F     | X  | 1  | X  | 1 0 0 0     | 0 1 0 1       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 8   | F     | X  | 1  | X  | 1 0 0 0     | 0 1 0 1       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 9   | F     | X  | 1  | X  | 1 0 0 0     | 0 1 0 1       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
 
 ### HALT
 
 CU signals decoding table for `Halt` instruction.
 
-| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
-|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
-| 0   | F     | X  | X  | X  | 0 1 1 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | X  | X  | X  | 0 1 1 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | X  | X  | X  | 0 1 1 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | X  | X  | X  | 0 1 1 1     | 0 0 1 1 | HLT      |          |          |          |
+| No. | Notes | SF | CF | ZF | Instruction | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 1 1 1     | X X X X       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 1 1 1     | X X X X       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 1 1 1     | X X X X       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 1 1 1     | X X X X       | 0 0 1 1 | HLT      |          |          |          |
 
 ### INPUT
 
 CU signals decoding table for `Input` instruction.
 
-| No. | Notes | SF | CF | ZF | Instruction | CU step | CU sigs. |          |          |          |
-|-----|-------|----|----|----|-------------|---------|----------|----------|----------|----------|
-| 0   | F     | X  | X  | X  | 0 1 0 1     | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
-| 1   | F     | X  | X  | X  | 0 1 0 1     | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
-| 2   | F     | X  | X  | X  | 0 1 0 1     | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
-| 3   | 0     | X  | X  | X  | 0 1 0 1     | 0 0 1 1 | ACU**I** | IO0**O** |          |          |
+| No. | Notes | SF | CF | ZF | Instruction | Instr subcode | CU step | CU sigs. |          |          |          |
+|-----|-------|----|----|----|-------------|---------------|---------|----------|----------|----------|----------|
+| 0   | F     | X  | X  | X  | 0 1 0 1     | X X X X       | 0 0 0 0 | PCL**O** | MAR**I** |          |          |
+| 1   | F     | X  | X  | X  | 0 1 0 1     | X X X X       | 0 0 0 1 | PCH**O** | PR**I**  |          |          |
+| 2   | F     | X  | X  | X  | 0 1 0 1     | X X X X       | 0 0 1 0 | MRQ      | MRD      | IR**I**  | PCE      |
+| 3   | 0     | X  | X  | X  | 0 1 0 1     | X X X X       | 0 0 1 1 | ACU**I** | IO0**O** |          |          |
