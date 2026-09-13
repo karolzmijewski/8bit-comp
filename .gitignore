@@ -1,1 +1,17 @@
 *.*#*
+
+# KiCad noise and user-local files
+*.kicad_prl
+*.lck
+~*.lck
+_autosave-*
+*-backups/
+fp-info-cache
+*.net
+*.bak
+*.kicad_sch-bak
+*.kicad_sym-bak
+
+# Editor / IDE artifacts
+**/.history/
+.vscode/

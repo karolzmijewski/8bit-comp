@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "ne555n-monostable-eagle-import") (type "KiCad") (uri "../../../lib/eagle-import/ne555n-monostable-eagle-import.kicad_sym") (options "") (descr ""))
+)

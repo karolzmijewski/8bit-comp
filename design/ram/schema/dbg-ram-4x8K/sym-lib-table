@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "dbg-ram-4x8K-eagle-import") (type "KiCad") (uri "../../../lib/eagle-import/dbg-ram-4x8K-eagle-import.kicad_sym") (options "") (descr ""))
+)

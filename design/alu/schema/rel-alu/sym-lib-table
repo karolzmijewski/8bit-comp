@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "rel-alu-eagle-import") (type "KiCad") (uri "../../../lib/eagle-import/rel-alu-eagle-import.kicad_sym") (options "") (descr ""))
+)

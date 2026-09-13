@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "rel-8bit-computer-eagle-import") (type "KiCad") (uri "${KIPRJMOD}/design/lib/eagle-import/rel-8bit-computer-eagle-import.kicad_sym") (options "") (descr ""))
+)

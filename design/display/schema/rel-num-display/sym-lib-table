@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "rel-num-display-eagle-import") (type "KiCad") (uri "../../../lib/eagle-import/rel-num-display-eagle-import.kicad_sym") (options "") (descr ""))
+)
